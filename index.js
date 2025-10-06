@@ -5,7 +5,6 @@ const { Client, Collection, Events, GatewayIntentBits, REST, Routes } = require(
 require('dotenv').config();
 const db = require('./database.js');
 
-// Adicione as Intents necessárias para saber quando um membro entra
 const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMembers] });
 
 // --- Carregador de Comandos ---
@@ -42,7 +41,6 @@ handlerTypes.forEach(handlerType => {
 client.once(Events.ClientReady, async () => {
     await db.initializeDatabase();
     
-    // Registo automático de comandos
     const rest = new REST({ version: '10' }).setToken(process.env.DISCORD_TOKEN);
     try {
         console.log(`[CMD] Iniciando registo de ${commandsToDeploy.length} comando(s).`);
@@ -65,16 +63,24 @@ client.once(Events.ClientReady, async () => {
 
 // --- Listener de Interações ---
 client.on(Events.InteractionCreate, async interaction => {
-    const handler = interaction.isChatInputCommand() 
-        ? client.commands.get(interaction.commandName)
-        : client.handlers.get(interaction.customId);
-
-    if (!handler) return;
-
     try {
-        await handler.execute(interaction, client);
+        if (interaction.isChatInputCommand()) {
+            const command = client.commands.get(interaction.commandName);
+            if (!command) return;
+            await command.execute(interaction, client);
+        } else {
+            const handler = client.handlers.get(interaction.customId);
+            if (!handler) return;
+            // AQUI ESTAVA O ERRO - A chamada agora está correta
+            await handler(interaction, client);
+        }
     } catch (error) {
-        console.error(`Erro ao executar a interação ${interaction.id}:`, error);
+        console.error(`Erro ao executar a interação ${interaction.customId || interaction.commandName}:`, error);
+        if (interaction.replied || interaction.deferred) {
+            await interaction.followUp({ content: 'Ocorreu um erro ao executar esta ação!', ephemeral: true });
+        } else {
+            await interaction.reply({ content: 'Ocorreu um erro ao executar esta ação!', ephemeral: true });
+        }
     }
 });
 
