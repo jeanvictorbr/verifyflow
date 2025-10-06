@@ -4,11 +4,14 @@ const { ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 module.exports = {
     customId: 'select_verification_channel',
     async execute(interaction) {
+        // Usa deferReply em vez de reply direto para evitar crashes
+        await interaction.deferReply({ ephemeral: true });
+
         const channelId = interaction.values[0];
         const channel = await interaction.guild.channels.fetch(channelId).catch(() => null);
 
         if (!channel) {
-            return interaction.reply({ content: '❌ Canal não encontrado.', ephemeral: true });
+            return interaction.editReply({ content: '❌ Canal não encontrado.' });
         }
 
         try {
@@ -23,11 +26,12 @@ module.exports = {
                 components: [new ActionRowBuilder().addComponents(loadButton)]
             });
 
-            await interaction.reply({ content: `✅ **Botão de carregamento enviado para ${channel}!** Vá até o canal e clique no botão para publicar o painel final.`, ephemeral: true });
+            // Usa editReply porque já demos deferReply
+            await interaction.editReply({ content: `✅ **Botão de carregamento enviado para ${channel}!** Vá até o canal e clique no botão para publicar o painel final.` });
 
         } catch (error) {
             console.error(error);
-            await interaction.reply({ content: `❌ Ocorreu um erro ao publicar o botão. Verifique se eu tenho permissão para enviar mensagens em ${channel}.`, ephemeral: true });
+            await interaction.editReply({ content: `❌ Ocorreu um erro ao publicar o botão. Verifique se eu tenho permissão para enviar mensagens em ${channel}.` });
         }
     }
 };
