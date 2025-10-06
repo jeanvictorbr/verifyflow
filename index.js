@@ -10,15 +10,18 @@ const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBit
 // --- Carregadores de Comandos e Handlers ---
 client.commands = new Collection();
 const commandsPath = path.join(__dirname, 'commands');
-const commandFiles = fs.readdirSync(commandsPath).filter(file => file.endsWith('.js'));
-const commandsToDeploy = [];
-for (const file of commandFiles) {
-    const command = require(path.join(commandsPath, file));
-    if (command.data && command.execute) {
-        client.commands.set(command.data.name, command);
-        commandsToDeploy.push(command.data.toJSON());
+if (fs.existsSync(commandsPath)) {
+    const commandFiles = fs.readdirSync(commandsPath).filter(file => file.endsWith('.js'));
+    const commandsToDeploy = [];
+    for (const file of commandFiles) {
+        const command = require(path.join(commandsPath, file));
+        if (command.data && command.execute) {
+            client.commands.set(command.data.name, command);
+            commandsToDeploy.push(command.data.toJSON());
+        }
     }
 }
+
 
 client.handlers = new Collection();
 const handlersPath = path.join(__dirname, 'handlers');
@@ -36,10 +39,11 @@ handlerTypes.forEach(handlerType => {
     }
 });
 
-// --- Evento de Bot Pronto ---
+// --- Evento de Bot Pronto (ClientReady) ---
 client.once(Events.ClientReady, async () => {
     await db.initializeDatabase();
     
+    const commandsToDeploy = Array.from(client.commands.values()).map(c => c.data.toJSON());
     const rest = new REST({ version: '10' }).setToken(process.env.DISCORD_TOKEN);
     try {
         console.log(`[CMD] Iniciando registo de ${commandsToDeploy.length} comando(s).`);
@@ -60,7 +64,7 @@ client.once(Events.ClientReady, async () => {
     console.log(`🚀 Bot online! Logado como ${client.user.tag}`);
 });
 
-// --- Listener de Interações ---
+// --- Listener de Interações (CORRIGIDO) ---
 client.on(Events.InteractionCreate, async interaction => {
     try {
         let handler;
@@ -77,7 +81,6 @@ client.on(Events.InteractionCreate, async interaction => {
         
         if (!handler) return;
         
-        // A função a ser executada é sempre .execute para comandos ou a própria função para handlers
         const executor = handler.execute || handler;
         await executor(interaction, client);
 
@@ -86,12 +89,15 @@ client.on(Events.InteractionCreate, async interaction => {
         if (interaction.replied || interaction.deferred) {
             await interaction.followUp({ content: 'Ocorreu um erro ao executar esta ação!', ephemeral: true });
         } else {
-            await interaction.reply({ content: 'Ocorreu um erro ao executar esta ação!', ephemeral: true });
+            // Se o modal falhou ao ser mostrado, não podemos responder a ele
+            if (!interaction.isModalSubmit()) {
+                 await interaction.reply({ content: 'Ocorreu um erro ao executar esta ação!', ephemeral: true });
+            }
         }
     }
 });
 
-// --- Listener de Entrada de Membros ---
+// --- Listener de Entrada de Membros (GuildMemberAdd) ---
 client.on(Events.GuildMemberAdd, async member => {
     console.log(`Novo membro entrou: ${member.user.tag}`);
 });
