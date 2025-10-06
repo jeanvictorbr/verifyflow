@@ -2,22 +2,21 @@
 const fs = require('node:fs');
 const path = require('node:path');
 const { Client, Collection, Events, GatewayIntentBits, REST, Routes } = require('discord.js');
+const generateWelcomeEmbed = require('./ui/welcomeEmbed.js'); // IMPORTAÇÃO DA NOVA UI
 require('dotenv').config();
 const db = require('./database.js');
 
 const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMembers] });
 
-// --- Carregadores de Comandos e Handlers ---
+// ... (Carregadores de Comandos e Handlers - sem alterações)
 client.commands = new Collection();
 const commandsPath = path.join(__dirname, 'commands');
 if (fs.existsSync(commandsPath)) {
     const commandFiles = fs.readdirSync(commandsPath).filter(file => file.endsWith('.js'));
-    const commandsToDeploy = [];
     for (const file of commandFiles) {
         const command = require(path.join(commandsPath, file));
         if (command.data && command.execute) {
             client.commands.set(command.data.name, command);
-            commandsToDeploy.push(command.data.toJSON());
         }
     }
 }
@@ -39,7 +38,7 @@ handlerTypes.forEach(handlerType => {
     }
 });
 
-// --- Evento de Bot Pronto (ClientReady) ---
+
 client.once(Events.ClientReady, async () => {
     await db.initializeDatabase();
     
@@ -64,14 +63,13 @@ client.once(Events.ClientReady, async () => {
     console.log(`🚀 Bot online! Logado como ${client.user.tag}`);
 });
 
-// --- Listener de Interações (CORRIGIDO) ---
+
 client.on(Events.InteractionCreate, async interaction => {
     try {
         let handler;
         if (interaction.isChatInputCommand()) {
             handler = client.commands.get(interaction.commandName);
         } else {
-            // Lógica para handlers dinâmicos e estáticos
             if (interaction.customId.startsWith('modal_verify_captcha_')) {
                 handler = client.handlers.get('modal_verify_captcha_');
             } else {
@@ -89,7 +87,6 @@ client.on(Events.InteractionCreate, async interaction => {
         if (interaction.replied || interaction.deferred) {
             await interaction.followUp({ content: 'Ocorreu um erro ao executar esta ação!', ephemeral: true });
         } else {
-            // Se o modal falhou ao ser mostrado, não podemos responder a ele
             if (!interaction.isModalSubmit()) {
                  await interaction.reply({ content: 'Ocorreu um erro ao executar esta ação!', ephemeral: true });
             }
@@ -97,9 +94,29 @@ client.on(Events.InteractionCreate, async interaction => {
     }
 });
 
-// --- Listener de Entrada de Membros (GuildMemberAdd) ---
+
+// --- Listener de Entrada de Membros (GuildMemberAdd) - AGORA COM LÓGICA ---
 client.on(Events.GuildMemberAdd, async member => {
-    console.log(`Novo membro entrou: ${member.user.tag}`);
+    try {
+        const settings = (await db.query('SELECT * FROM guild_settings WHERE guild_id = $1', [member.guild.id])).rows[0];
+
+        // Se o sistema estiver desativado ou sem canal, não faz nada
+        if (!settings || !settings.welcome_enabled || !settings.welcome_channel_id) {
+            return;
+        }
+
+        const channel = await member.guild.channels.fetch(settings.welcome_channel_id).catch(() => null);
+        if (!channel) {
+            console.log(`[Boas-Vindas] Canal de boas-vindas não encontrado para a guild ${member.guild.id}`);
+            return;
+        }
+
+        const welcomeMessage = generateWelcomeEmbed(member, settings);
+        await channel.send(welcomeMessage);
+
+    } catch (error) {
+        console.error(`Erro ao enviar mensagem de boas-vindas para ${member.user.tag}:`, error);
+    }
 });
 
 client.login(process.env.DISCORD_TOKEN);
