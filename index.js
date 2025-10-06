@@ -7,7 +7,7 @@ const db = require('./database.js');
 
 const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMembers] });
 
-// --- Carregador de Comandos ---
+// --- Carregadores de Comandos e Handlers ---
 client.commands = new Collection();
 const commandsPath = path.join(__dirname, 'commands');
 const commandFiles = fs.readdirSync(commandsPath).filter(file => file.endsWith('.js'));
@@ -20,7 +20,6 @@ for (const file of commandFiles) {
     }
 }
 
-// --- Carregador de Handlers ---
 client.handlers = new Collection();
 const handlersPath = path.join(__dirname, 'handlers');
 const handlerTypes = ['buttons', 'modals', 'selects'];
@@ -37,7 +36,7 @@ handlerTypes.forEach(handlerType => {
     }
 });
 
-// --- Evento de Bot Pronto (ClientReady) ---
+// --- Evento de Bot Pronto ---
 client.once(Events.ClientReady, async () => {
     await db.initializeDatabase();
     
@@ -64,16 +63,24 @@ client.once(Events.ClientReady, async () => {
 // --- Listener de Interações ---
 client.on(Events.InteractionCreate, async interaction => {
     try {
+        let handler;
         if (interaction.isChatInputCommand()) {
-            const command = client.commands.get(interaction.commandName);
-            if (!command) return;
-            await command.execute(interaction, client);
+            handler = client.commands.get(interaction.commandName);
         } else {
-            const handler = client.handlers.get(interaction.customId);
-            if (!handler) return;
-            // AQUI ESTAVA O ERRO - A chamada agora está correta
-            await handler(interaction, client);
+            // Lógica para handlers dinâmicos e estáticos
+            if (interaction.customId.startsWith('modal_verify_captcha_')) {
+                handler = client.handlers.get('modal_verify_captcha_');
+            } else {
+                handler = client.handlers.get(interaction.customId);
+            }
         }
+        
+        if (!handler) return;
+        
+        // A função a ser executada é sempre .execute para comandos ou a própria função para handlers
+        const executor = handler.execute || handler;
+        await executor(interaction, client);
+
     } catch (error) {
         console.error(`Erro ao executar a interação ${interaction.customId || interaction.commandName}:`, error);
         if (interaction.replied || interaction.deferred) {
@@ -84,9 +91,8 @@ client.on(Events.InteractionCreate, async interaction => {
     }
 });
 
-// --- Listener de Entrada de Membros (GuildMemberAdd) ---
+// --- Listener de Entrada de Membros ---
 client.on(Events.GuildMemberAdd, async member => {
-    // A lógica das boas-vindas virá aqui
     console.log(`Novo membro entrou: ${member.user.tag}`);
 });
 
