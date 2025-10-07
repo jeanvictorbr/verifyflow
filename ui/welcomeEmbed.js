@@ -8,7 +8,7 @@ module.exports = function generateWelcomeEmbed(member, settings) {
         .setTitle(`Um novo membro chegou!`)
         .setDescription(`Temos o prazer de receber ${member} no servidor **${member.guild.name}**!\n\nPara garantir a melhor experiência e ter acesso a todos os nossos canais, o seu próximo passo é simples:`)
         .setThumbnail(member.guild.iconURL())
-        .setImage('https://i.imgur.com/345s6yS.gif') // GIF/Imagem personalizável de boas-vindas
+        .setImage('https://images-ext-1.discordapp.net/external/RRvl7PvYp2JTN747bvu1sB-qRf7-5jUE9bPOed922is/https/i.imgur.com/ECiLszt.gif') // GIF/Imagem personalizável de boas-vindas
         .addFields({ name: 'Ação Necessária', value: 'Clique no botão abaixo para ir para o canal de verificação e seguir as instruções.' })
         .setTimestamp()
         .setFooter({ text: `Você é o nosso ${member.guild.memberCount}º membro!` });
