@@ -10,7 +10,8 @@ const guildSettingsTable = `
         -- Sistema de Boas-Vindas
         welcome_enabled BOOLEAN DEFAULT false,
         welcome_channel_id VARCHAR(255),
-        welcome_news_channel_id VARCHAR(255) -- NOVA COLUNA
+        welcome_news_channel_id VARCHAR(255),
+        welcome_verification_channel_id VARCHAR(255) -- NOVA COL -- NOVA COLUNA
     );
 
 `;

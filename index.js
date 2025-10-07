@@ -1,14 +1,15 @@
 // index.js
+// ... (imports e configuração inicial como antes)
 const fs = require('node:fs');
 const path = require('node:path');
 const { Client, Collection, Events, GatewayIntentBits, REST, Routes } = require('discord.js');
-const generateWelcomeEmbed = require('./ui/welcomeEmbed.js'); // IMPORTAÇÃO DA NOVA UI
+const generateWelcomeEmbed = require('./ui/welcomeEmbed.js');
 require('dotenv').config();
 const db = require('./database.js');
 
+// ... (todo o resto do seu index.js permanece igual)
 const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMembers] });
 
-// ... (Carregadores de Comandos e Handlers - sem alterações)
 client.commands = new Collection();
 const commandsPath = path.join(__dirname, 'commands');
 if (fs.existsSync(commandsPath)) {
@@ -95,13 +96,13 @@ client.on(Events.InteractionCreate, async interaction => {
 });
 
 
-// --- Listener de Entrada de Membros (GuildMemberAdd) - AGORA COM LÓGICA ---
+// --- Listener de Entrada de Membros (GuildMemberAdd) - LÓGICA ATUALIZADA ---
 client.on(Events.GuildMemberAdd, async member => {
     try {
         const settings = (await db.query('SELECT * FROM guild_settings WHERE guild_id = $1', [member.guild.id])).rows[0];
 
-        // Se o sistema estiver desativado ou sem canal, não faz nada
-        if (!settings || !settings.welcome_enabled || !settings.welcome_channel_id) {
+        // Se o sistema estiver desativado ou algum canal essencial não estiver configurado, não faz nada
+        if (!settings || !settings.welcome_enabled || !settings.welcome_channel_id || !settings.welcome_verification_channel_id) {
             return;
         }
 

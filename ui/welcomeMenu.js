@@ -2,8 +2,9 @@
 module.exports = function generateWelcomeMenu(settings) {
     const systemStatus = settings?.welcome_enabled ? '✅ Ativado' : '❌ Desativado';
     const channelStatus = settings?.welcome_channel_id ? `<#${settings.welcome_channel_id}>` : '❌ Não definido';
+    const verificationChannelStatus = settings?.welcome_verification_channel_id ? `<#${settings.welcome_verification_channel_id}>` : '❌ Não definido';
 
-    const isConfigured = !!settings?.welcome_channel_id;
+    const isConfigured = !!settings?.welcome_channel_id && !!settings?.welcome_verification_channel_id;
 
     const toggleButton = settings?.welcome_enabled
         ? { label: 'Desativar Sistema', style: 4 }
@@ -14,7 +15,6 @@ module.exports = function generateWelcomeMenu(settings) {
             "type": 17,
             "components": [
                 { "type": 10, "content": "## 👋 Configuração do Sistema de Boas-Vindas" },
-                { "type": 10, "content": "> Ative e defina o canal onde a mensagem de boas-vindas para novos membros será enviada." },
                 { "type": 14, "divider": true, "spacing": 2 },
                 {
                     "type": 9,
@@ -25,7 +25,13 @@ module.exports = function generateWelcomeMenu(settings) {
                 {
                     "type": 9,
                     "accessory": { "type": 2, "style": 1, "label": "Definir Canal", "custom_id": "welcome_set_channel" },
-                    "components": [{ "type": 10, "content": `**Canal de Boas-Vindas**\n> ${channelStatus}` }]
+                    "components": [{ "type": 10, "content": `**Enviar Boas-Vindas Para:**\n> ${channelStatus}` }]
+                },
+                { "type": 14, "divider": true, "spacing": 1 },
+                {
+                    "type": 9,
+                    "accessory": { "type": 2, "style": 1, "label": "Definir Canal", "custom_id": "welcome_set_verification_channel" },
+                    "components": [{ "type": 10, "content": `**Link do Botão 'Comece por aqui!'**\n> Apontar para: ${verificationChannelStatus}` }]
                 },
                 { "type": 14, "divider": true, "spacing": 2 },
                 {
